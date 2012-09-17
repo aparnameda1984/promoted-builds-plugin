@@ -19,13 +19,13 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 
-public class KeepBuildForeverActionTest extends HudsonTestCase {
+public class KeepBuildForeverActionTest extends PromotionTestCase {
     
     public void testCanMarkBuildKeepForever() throws Exception {
         FreeStyleProject upJob = createProject("up");
-        upJob.getBuildersList().add(successfulBuilder());
+        addBuilder(upJob, successfulBuilder());
         FreeStyleProject downJob = createProject("down");
-        downJob.getBuildersList().add(successfulBuilder());
+        addBuilder(downJob, successfulBuilder());
 
         PromotionProcess promotionJob = createDownstreamSuccessPromotion(upJob, downJob);
         promotionJob.getBuildSteps().add(new KeepBuildForeverAction());
@@ -40,9 +40,9 @@ public class KeepBuildForeverActionTest extends HudsonTestCase {
     
     public void testDoesNotMarkBuildIfPromotionNotGoodEnough() throws Exception {
         FreeStyleProject upJob = createProject("up");
-        upJob.getBuildersList().add(successfulBuilder());
+        addBuilder(upJob, successfulBuilder());
         FreeStyleProject downJob = createProject("down");
-        downJob.getBuildersList().add(successfulBuilder());
+        addBuilder(downJob, successfulBuilder());
 
         PromotionProcess promotionJob = createDownstreamSuccessPromotion(upJob, downJob);
         promotionJob.getBuildSteps().add(new FixedResultBuilder(Result.FAILURE));
@@ -58,9 +58,9 @@ public class KeepBuildForeverActionTest extends HudsonTestCase {
 
     public void testDoesNotCareAboutResultOfOriginalBuild() throws Exception {
         FreeStyleProject upJob = createProject("up");
-        upJob.getBuildersList().add(new FixedResultBuilder(Result.FAILURE));
+        addBuilder(upJob, new FixedResultBuilder(Result.FAILURE));
         FreeStyleProject downJob = createProject("down");
-        downJob.getBuildersList().add(successfulBuilder());
+        addBuilder(downJob, successfulBuilder());
 
         PromotionProcess promotionJob = createDownstreamSuccessPromotion(upJob, downJob);
         promotionJob.getBuildSteps().add(new KeepBuildForeverAction());
@@ -75,8 +75,8 @@ public class KeepBuildForeverActionTest extends HudsonTestCase {
 
     public void testDoesNotMarkBuildIfBuildNotPromotion() throws Exception {
         FreeStyleProject job = createProject("job");
-        job.getBuildersList().add(successfulBuilder());
-        job.getPublishersList().add(new KeepBuildForeverAction());
+        addBuilder(job, successfulBuilder());
+        job.addPublisher(new KeepBuildForeverAction());
 
         FreeStyleBuild build = assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
         assertFalse(build.isKeepLog());

@@ -24,7 +24,7 @@ import java.util.logging.Logger;
 /**
  * @author Kohsuke Kawaguchi
  */
-public class PromotionProcessTest extends HudsonTestCase {
+public class PromotionProcessTest extends PromotionTestCase {
     public void test1() throws Exception {
         FreeStyleProject up = createFreeStyleProject("up");
         FreeStyleProject down = createFreeStyleProject();
@@ -72,23 +72,6 @@ public class PromotionProcessTest extends HudsonTestCase {
         }
     }
     
-    private void addBuilder(FreeStyleProject up, Shell shell) throws Exception {
-      DescribableList<Builder, Descriptor<Builder>> buildersList = up.getBuildersList();
-      buildersList.add(shell);
-      up.setBuilders(buildersList);
-    }
-    
-    private void replacePublishers(FreeStyleProject p, List<Recorder> recorders) throws Exception {
-      DescribableList<Publisher, Descriptor<Publisher>> publishersList = p.getPublishersList();
-      Map<Descriptor<Publisher>, Publisher> map = publishersList.toMap();
-      for (Descriptor<Publisher> descriptor : map.keySet()) {
-        p.removePublisher(descriptor);
-      }
-      for (Recorder recorder : recorders) {
-        p.addPublisher(recorder);
-      }
-    }
-
     /**
      * Tests a promotion induced by the pseudo upstream/downstream cause relationship
      */
@@ -103,11 +86,11 @@ public class PromotionProcessTest extends HudsonTestCase {
         proc.conditions.add(new DownstreamPassCondition(down.getName()));
 
         // trigger downstream automatically to create relationship
-        up.getPublishersList().add(new BuildTrigger(down.getName(), Result.SUCCESS));
+        up.addPublisher(new BuildTrigger(down.getName(), Result.SUCCESS));
         hudson.rebuildDependencyGraph();
         
         // this is the downstream job
-        down.getBuildersList().add(new Shell(
+        addBuilder(down, new Shell(
             "expr $BUILD_NUMBER % 2 - 1\n"  // expr exits with non-zero status if result is zero
         ));
 
