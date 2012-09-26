@@ -35,4 +35,7 @@ public class PromotionTestCase extends HudsonTestCase {
       }
     }
 
+    public void testDummy() throws Exception {
+        // Do nothing. This class is just used as super class
+    }
 }
