@@ -78,7 +78,7 @@ public class KeepBuildForeverActionTest extends PromotionTestCase {
         addBuilder(job, successfulBuilder());
         job.addPublisher(new KeepBuildForeverAction());
 
-        FreeStyleBuild build = assertBuildStatus(Result.FAILURE, job.scheduleBuild2(0).get());
+        FreeStyleBuild build = assertBuildStatus(Result.SUCCESS, job.scheduleBuild2(0).get());
         assertFalse(build.isKeepLog());
     }
 
@@ -92,6 +92,7 @@ public class KeepBuildForeverActionTest extends PromotionTestCase {
 
     private void waitFor(final WaitCondition condition, long timeout) throws Exception {
         Thread waiter = new Thread() {
+            @Override
             public void run() {
                 try {
                     while (!condition.isMet()) {
@@ -105,8 +106,9 @@ public class KeepBuildForeverActionTest extends PromotionTestCase {
         if (waiter.isAlive()) {
             waiter.interrupt();
         }
-        if (!condition.isMet())
+        if (!condition.isMet()) {
             fail("Condition not met");
+        }
     }
 
     private PromotionProcess createDownstreamSuccessPromotion(FreeStyleProject upStream, FreeStyleProject downStream)
@@ -120,7 +122,7 @@ public class KeepBuildForeverActionTest extends PromotionTestCase {
     
     private FreeStyleProject createProject(String name) throws Exception {
         FreeStyleProject project = createFreeStyleProject(name);
-        project.getPublishersList().replaceBy(createFingerprinters());
+        replacePublishers(project, createFingerprinters());
         return project;
     }
     
