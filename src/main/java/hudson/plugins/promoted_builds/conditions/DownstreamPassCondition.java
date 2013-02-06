@@ -139,19 +139,13 @@ public class DownstreamPassCondition extends PromotionCondition {
         }
 
         public String getDisplayName() {
-            return "When the following downstream projects build successfully";
+            return Messages.DownstreamPassCondition_DisplayName();
         }
 
-        public String getHelpFile() {
-            return "/plugin/promoted-builds/conditions/downstream.html";
-        }
-        
         public PromotionCondition newInstance(StaplerRequest req, JSONObject formData) throws FormException {
             return new DownstreamPassCondition(
                     formData.getString("jobs"), formData.getBoolean("evenIfUnstable"));
         }
-
-        public static final DescriptorImpl INSTANCE = new DescriptorImpl();
     }
 
     /**
@@ -216,7 +210,7 @@ public class DownstreamPassCondition extends PromotionCondition {
                                     }
                                 }
 
-                                if(u!=null && p.considerPromotion(u))
+                                if(u!=null && p.considerPromotion2(u)!=null)
                                     listener.getLogger().println("Promoted "+u);
                             } catch (IOException e) {
                                 e.printStackTrace(listener.error("Failed to promote a build"));

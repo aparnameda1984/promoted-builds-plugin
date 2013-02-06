@@ -6,6 +6,8 @@ import hudson.model.Action;
 import hudson.model.BuildBadgeAction;
 import hudson.model.Cause.UserCause;
 import hudson.util.CopyOnWriteList;
+import org.kohsuke.stapler.HttpResponse;
+import org.kohsuke.stapler.HttpResponses;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
@@ -94,6 +96,22 @@ public final class PromotedBuildAction implements BuildBadgeAction {
     }
 
     /**
+     * Gets the read-only view of all the promotion builds that this build achieved 
+     * for a PromotionProcess.
+     */
+    public List<Promotion> getPromotionBuilds(PromotionProcess promotionProcess) {
+    	List<Promotion> filtered = new ArrayList<Promotion>();
+    	
+    	for(Status s: getPromotions() ){
+    		if( s.isFor(promotionProcess)){
+    			filtered.addAll( s.getPromotionBuilds() );
+    		}
+    	}
+        return filtered;
+    }
+
+    
+    /**
      * Finds the {@link Status} that has matching {@link Status#name} value.
      * Or null if not found.
      */
@@ -176,14 +194,13 @@ public final class PromotedBuildAction implements BuildBadgeAction {
     /**
      * Force a promotion.
      */
-    public void doForcePromotion(StaplerRequest req, StaplerResponse rsp, @QueryParameter("name") String name) throws IOException {
+    public HttpResponse doForcePromotion(@QueryParameter("name") String name) throws IOException {
 //        if(!req.getMethod().equals("POST")) {// require post,
 //            rsp.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
 //            return;
 //        }
 
-        if(!this.getProject().hasPermission(Promotion.PROMOTE))
-            return;
+        this.getProject().checkPermission(Promotion.PROMOTE);
 
         JobPropertyImpl pp = getProject().getProperty(JobPropertyImpl.class);
         if(pp==null)
@@ -193,8 +210,8 @@ public final class PromotedBuildAction implements BuildBadgeAction {
         if(p==null)
             throw new IllegalStateException("This project doesn't have the promotion criterion called "+name);
 
-        p.promote(owner,new UserCause(),new Status(p,Collections.singleton(new ManualPromotionBadge())));
+        p.promote(owner,new UserCause(),new ManualPromotionBadge());
 
-        rsp.sendRedirect2(".");
+        return HttpResponses.redirectToDot();
     }
 }

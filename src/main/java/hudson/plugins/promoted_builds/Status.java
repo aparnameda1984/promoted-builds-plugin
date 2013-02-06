@@ -84,12 +84,20 @@ public final class Status {
      * Gets the icon that should represent this promotion (that is potentially attempted but failed.)
      */
     public String getIcon(String size) {
+        String baseName;
+
         PromotionProcess p = getProcess();
-        if (p == null)      return null;
-        Promotion l = getLast();
-        if (l!=null && l.getResult()!= Result.SUCCESS)
-            return Hudson.RESOURCE_PATH+"/images/"+size+"/error.png";
-        return "/plugin/promoted-builds/icons/"+size+"/"+p.getIcon()+".gif";
+        if (p == null) {
+            // promotion process undefined (perhaps deleted?). fallback to the default icon
+            baseName = "star-gold";
+        } else {
+            Promotion l = getLast();
+            if (l!=null && l.getResult()!= Result.SUCCESS)
+                return Hudson.RESOURCE_PATH+"/images/"+size+"/error.png";
+
+            baseName = p.getIcon();
+        }
+        return "/plugin/promoted-builds/icons/"+size+"/"+ baseName +".gif";
     }
 
     /**
@@ -241,12 +249,14 @@ public final class Status {
      * Gets all the promotion builds.
      */
     public List<Promotion> getPromotionBuilds() {
-        PromotionProcess p = getProcess();
         List<Promotion> builds = new ArrayList<Promotion>();
-        for( Integer n : Iterators.reverse(promotionAttempts) ) {
-            Promotion b = p.getBuildByNumber(n);
-            if (b != null) {
-                builds.add(b);
+        PromotionProcess p = getProcess();
+        if (p!=null) {
+            for( Integer n : Iterators.reverse(promotionAttempts) ) {
+                Promotion b = p.getBuildByNumber(n);
+                if (b != null) {
+                    builds.add(b);
+                }
             }
         }
         return builds;

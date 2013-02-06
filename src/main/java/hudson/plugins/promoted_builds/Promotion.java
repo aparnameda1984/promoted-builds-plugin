@@ -1,13 +1,11 @@
 package hudson.plugins.promoted_builds;
 
 import hudson.EnvVars;
-import hudson.FilePath;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Cause.LegacyCodeCause;
 import hudson.model.Hudson;
-import hudson.model.Job;
 import hudson.model.Node;
 import hudson.model.Result;
 import hudson.model.TaskListener;
@@ -23,19 +21,14 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Calendar;
 import java.util.List;
-import java.util.logging.Logger;
 
 /**
  * Records a promotion process.
  *
  * @author Kohsuke Kawaguchi
  */
-public class Promotion extends AbstractBuild<PromotionProcess,Promotion> {
-    /**
-     * The build number of the project that this promotion promoted.
-     * @see #getTarget()
-     */
-    private int targetBuildNumber;
+public class Promotion extends AbstractBuild<PromotionProcess,Promotion> 
+	implements Comparable<Promotion>{
 
     public Promotion(PromotionProcess job) throws IOException {
         super(job);
@@ -51,9 +44,18 @@ public class Promotion extends AbstractBuild<PromotionProcess,Promotion> {
 
     /**
      * Gets the build that this promotion promoted.
+     *
+     * @return
+     *      null if there's no such object. For example, if the build has already garbage collected.
      */
     public AbstractBuild<?,?> getTarget() {
-        return getParent().getOwner().getBuildByNumber(targetBuildNumber);
+        PromotionTargetAction pta = getAction(PromotionTargetAction.class);
+        return pta.resolve(this);
+    }
+
+    public AbstractBuild<?,?> getRootBuild() {
+        // TODO: once 1.421 ships, update this to getTarget().getRootBuild() for correctness.
+        return getTarget();
     }
 
     @Override
@@ -74,14 +76,13 @@ public class Promotion extends AbstractBuild<PromotionProcess,Promotion> {
         EnvVars e = super.getEnvironment(listener);
 
         // Augment environment with target build's information
-        if (targetBuildNumber != 0) {
-            String rootUrl = Hudson.getInstance().getRootUrl();
-            if(rootUrl!=null)
-                e.put("PROMOTED_URL",rootUrl+getTarget().getUrl());
-            e.put("PROMOTED_JOB_NAME", getTarget().getParent().getName());
-            e.put("PROMOTED_NUMBER", Integer.toString(targetBuildNumber));
-            e.put("PROMOTED_ID", getTarget().getId());
-        }
+        String rootUrl = Hudson.getInstance().getRootUrl();
+        AbstractBuild<?, ?> target = getTarget();
+        if(rootUrl!=null)
+            e.put("PROMOTED_URL",rootUrl+target.getUrl());
+        e.put("PROMOTED_JOB_NAME", target.getParent().getName());
+        e.put("PROMOTED_NUMBER", Integer.toString(target.getNumber()));
+        e.put("PROMOTED_ID", target.getId());
 
         // Allow the promotion status to contribute to build environment
         getStatus().buildEnvVars(this, e);
@@ -94,11 +95,6 @@ public class Promotion extends AbstractBuild<PromotionProcess,Promotion> {
     }
 
     protected class RunnerImpl extends AbstractRunner {
-        private AbstractBuild<?,?> getTarget() {
-            PromotionTargetAction pta = getAction(PromotionTargetAction.class);
-            return pta.resolve();
-        }
-
         @Override
         protected Lease decideWorkspace(Node n, WorkspaceList wsl) throws InterruptedException, IOException {
             String customWorkspace = getProject().getCustomWorkspace();
@@ -111,7 +107,6 @@ public class Promotion extends AbstractBuild<PromotionProcess,Promotion> {
 
         protected Result doRun(BuildListener listener) throws Exception {
             AbstractBuild<?, ?> target = getTarget();
-            targetBuildNumber = target.getNumber();
 
             listener.getLogger().println("Promoting "+target);
 
@@ -180,4 +175,10 @@ public class Promotion extends AbstractBuild<PromotionProcess,Promotion> {
     //public static final Permission PROMOTE = new Permission(PERMISSIONS, "Promote", Messages._Promotion_PromotePermission_Description(), Hudson.ADMINISTER);
     public static final PermissionGroup PERMISSIONS = new PermissionGroup(Promotion.class, null);
     public static final Permission PROMOTE = new Permission(PERMISSIONS, "Promote", null, Hudson.ADMINISTER);
+    
+    @Override
+    public int compareTo(Promotion that) {
+    	return that.getId().compareTo( this.getId() );
+    }
+    
 }

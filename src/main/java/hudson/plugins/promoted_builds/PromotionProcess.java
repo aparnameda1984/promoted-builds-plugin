@@ -1,5 +1,6 @@
 package hudson.plugins.promoted_builds;
 
+import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
@@ -17,6 +18,8 @@ import hudson.model.PermalinkProjectAction.Permalink;
 import hudson.model.Queue.Item;
 import hudson.model.Run;
 import hudson.model.Saveable;
+import hudson.model.labels.LabelAtom;
+import hudson.model.labels.LabelExpression;
 import hudson.tasks.BuildStep;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
@@ -27,9 +30,11 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.logging.Level;
+import java.util.concurrent.Future;
 import java.util.logging.Logger;
+import org.antlr.runtime.RecognitionException;
 
 /**
  * A dummy {@link AbstractProject} to carry out promotion operations.
@@ -49,7 +54,12 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
      * and ${rootURL}/plugin/promoted-builds/icons/32x32/, e.g. <code>"star-gold"</code>.
      */
     public String icon;
-
+    
+    /**
+     * The label that promotion process can be run on.
+     */
+    public String assignedLabel;
+    
     private List<BuildStep> buildSteps = new ArrayList<BuildStep>();
 
     /*package*/ PromotionProcess(JobPropertyImpl property, String name) {
@@ -63,6 +73,12 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
         buildSteps = (List)Descriptor.newInstancesFromHeteroList(
                 req, c, "buildStep", (List) PromotionProcess.getAll());
         icon = c.getString("icon");
+        if (c.has("hasAssignedLabel")) {
+            JSONObject j = c.getJSONObject("hasAssignedLabel");
+            assignedLabel = Util.fixEmptyAndTrim(j.getString("labelString"));
+        } else {
+            assignedLabel = null;
+        }
         save();
     }
 
@@ -101,7 +117,7 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
 
         return null;
     }
-
+    
     public DescribableList<Publisher, Descriptor<Publisher>> getPublishersList() {
         // TODO: extract from the buildsSteps field? Or should I separate builders and publishers?
         return new DescribableList<Publisher,Descriptor<Publisher>>(this);
@@ -115,10 +131,27 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
         return buildSteps;
     }
 
+    /**
+     * Gets the textual representation of the assigned label as it was entered by the user.
+     */
+    @Override
+    public String getAssignedLabelString() {
+        if (assignedLabel == null) return null;
+        try {
+            LabelExpression.parseExpression(assignedLabel);
+            return assignedLabel;
+        } catch (RecognitionException e) {
+            // must be old label or host name that includes whitespace or other unsafe chars
+            return LabelAtom.escape(assignedLabel);
+        }
+    }
+   
     @Override public Label getAssignedLabel() {
         // Really would like to run on the exact node that the promoted build ran on,
         // not just the same label.. but at least this works if job is tied to one node:
-        return getOwner().getAssignedLabel();
+        if (assignedLabel == null) return getOwner().getAssignedLabel();
+
+        return Hudson.getInstance().getLabel(assignedLabel);
     }
 
     @Override public JDK getJDK() {
@@ -131,14 +164,10 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
      * Support for FreeStyleProject only.
      * @return customWorkspace
      */
-    public String getCustomWorkspace() {
+    public String getCustomWorkspace() throws IOException {
         AbstractProject<?, ?> p = getOwner();
         if (p instanceof FreeStyleProject)
-            try {
-              return ((FreeStyleProject) p).getCustomWorkspace();
-            } catch (IOException ex) {
-              ;
-            }
+            return ((FreeStyleProject) p).getCustomWorkspace();
         return null;
     }
     
@@ -215,34 +244,59 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
     }
 
     /**
+     * @deprecated
+     *      Use {@link #considerPromotion2(AbstractBuild)}
+     */
+    public boolean considerPromotion(AbstractBuild<?,?> build) throws IOException {
+        return considerPromotion2(build)!=null;
+    }
+
+    /**
      * Checks if the build is promotable, and if so, promote it.
      *
      * @return
-     *      true if the build was promoted.
+     *      null if the build was not promoted, otherwise Future that kicks in when the build is completed.
      */
-    public boolean considerPromotion(AbstractBuild<?,?> build) throws IOException {
+    public Future<Promotion> considerPromotion2(AbstractBuild<?,?> build) throws IOException {
         PromotedBuildAction a = build.getAction(PromotedBuildAction.class);
 
         // if it's already promoted, no need to do anything.
         if(a!=null && a.contains(this))
-            return false;
+            return null;
 
+        LOGGER.fine("Considering the promotion of "+build+" via "+getName());
         Status qualification = isMet(build);
         if(qualification==null)
-            return false; // not this time
+            return null; // not this time
 
-        promote(build,new LegacyCodeCause(),qualification); // TODO: define promotion cause
-
-        return true;
+        LOGGER.fine("Promotion condition of "+build+" is met: "+qualification);
+        Future<Promotion> f = promote2(build, new LegacyCodeCause(), qualification); // TODO: define promotion cause
+        if (f==null)
+            LOGGER.warning(build+" qualifies for a promotion but the queueing failed.");
+        return f;
     }
 
+    public void promote(AbstractBuild<?,?> build, Cause cause, PromotionBadge... badges) throws IOException {
+        promote2(build,cause,new Status(this,Arrays.asList(badges)));
+    }
+
+    /**
+     * @deprecated
+     *      Use {@link #promote2(AbstractBuild, Cause, Status)}
+     */
+    public void promote(AbstractBuild<?,?> build, Cause cause, Status qualification) throws IOException {
+        promote2(build,cause,qualification);
+    }
+    
     /**
      * Promote the given build by using the given qualification.
      *
      * @param cause
      *      Why the build is promoted?
+     * @return
+     *      Future to track the completion of the promotion.
      */
-    public void promote(AbstractBuild<?,?> build, Cause cause, Status qualification) throws IOException {
+    public Future<Promotion> promote2(AbstractBuild<?,?> build, Cause cause, Status qualification) throws IOException {
         PromotedBuildAction a = build.getAction(PromotedBuildAction.class);
         // build is qualified for a promotion.
         if(a!=null) {
@@ -253,7 +307,7 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
         }
 
         // schedule promotion activity.
-        scheduleBuild(build,cause);
+        return scheduleBuild2(build,cause);
     }
 
     /**
@@ -268,7 +322,15 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
         return scheduleBuild(build,new LegacyCodeCause());
     }
 
+    /**
+     * @deprecated
+     *      Use {@link #scheduleBuild2(AbstractBuild, Cause)}
+     */
     public boolean scheduleBuild(AbstractBuild<?,?> build, Cause cause) {
+        return scheduleBuild2(build,cause)!=null;
+    }
+
+    public Future<Promotion> scheduleBuild2(AbstractBuild<?,?> build, Cause cause) {
         assert build.getProject()==getOwner();
 
         // Get the parameters, if any, used in the target build and make these
@@ -281,12 +343,12 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
         actions.add(new PromotionTargetAction(build));
 
         // remember what build we are promoting
-        return super.scheduleBuild(0,cause,actions.toArray(new Action[actions.size()]));
+        return super.scheduleBuild2(0, cause, actions.toArray(new Action[actions.size()]));
     }
 
     public boolean isInQueue(AbstractBuild<?,?> build) {
         for (Item item : Hudson.getInstance().getQueue().getItems(this))
-            if (item.getAction(PromotionTargetAction.class).resolve()==build)
+            if (item.getAction(PromotionTargetAction.class).resolve(this)==build)
                 return true;
         return false;
     }
@@ -344,4 +406,6 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
             }
         };
     }
+
+    private static final Logger LOGGER = Logger.getLogger(PromotionProcess.class.getName());
 }

@@ -5,6 +5,7 @@ import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.Action;
+import hudson.model.AutoCompletionCandidates;
 import hudson.model.BuildListener;
 import hudson.model.Descriptor;
 import hudson.model.Failure;
@@ -15,6 +16,7 @@ import hudson.model.Items;
 import hudson.model.Job;
 import hudson.model.JobProperty;
 import hudson.model.JobPropertyDescriptor;
+import hudson.model.Label;
 import hudson.tasks.BuildStep;
 import hudson.util.FormValidation;
 import net.sf.json.JSONArray;
@@ -29,6 +31,8 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
+import org.antlr.runtime.RecognitionException;
 import org.kohsuke.stapler.QueryParameter;
 
 /**
@@ -109,7 +113,7 @@ public final class JobPropertyImpl extends JobProperty<AbstractProject<?,?>> imp
         // load inactive processes
         File[] subdirs = getRootDir().listFiles(new FileFilter() {
             public boolean accept(File child) {
-                return child.isDirectory() && !activeProcessNames.contains(child.getName());
+                return child.isDirectory() && !isActiveProcessNameIgnoreCase(child.getName());
             }
         });
         if(subdirs!=null) {
@@ -155,11 +159,34 @@ public final class JobPropertyImpl extends JobProperty<AbstractProject<?,?>> imp
     private void buildActiveProcess() throws IOException {
         activeProcesses = new ArrayList<PromotionProcess>();
         for (PromotionProcess p : processes) {
-            boolean active = activeProcessNames.contains(p.getName());
+            boolean active = isActiveProcessNameIgnoreCase(p.getName());
             p.makeDisabled(!active);
             if(active)
                 activeProcesses.add(p);
+
+            // ensure that the name casing matches what's given in the activeProcessName
+            // this is because in case insensitive file system, we may end up resolving
+            // to a directory name that differs only in their case.
+            p.renameTo(getActiveProcessName(p.getName()));
         }
+    }
+
+    /**
+     * Return the string in the case as specified in {@link #activeProcessNames}.
+     */
+    private String getActiveProcessName(String s) {
+        for (String n : activeProcessNames) {
+            if (n.equalsIgnoreCase(s))
+                return n;
+        }
+        return s;   // huh?
+    }
+
+    private boolean isActiveProcessNameIgnoreCase(String s) {
+        for (String n : activeProcessNames)
+            if (n.equalsIgnoreCase(s))
+                return true;
+        return false;
     }
 
     /**
@@ -303,6 +330,78 @@ public final class JobPropertyImpl extends JobProperty<AbstractProject<?,?>> imp
 
             return FormValidation.ok();
         }
+        
+        public FormValidation doCheckLabelString(@QueryParameter String value) {
+            if (Util.fixEmpty(value)==null)
+                return FormValidation.ok(); // nothing typed yet
+            try {
+                Label.parseExpression(value);
+            } catch (RecognitionException e) {
+                return FormValidation.error(e,
+                        Messages.JobPropertyImpl_LabelString_InvalidBooleanExpression(e.getMessage()));
+            }
+            // TODO: if there's an atom in the expression that is empty, report it
+            if (Hudson.getInstance().getLabel(value).isEmpty())
+                return FormValidation.warning(Messages.JobPropertyImpl_LabelString_NoMatch());
+            return FormValidation.ok();
+        }
 
+        public AutoCompletionCandidates doAutoCompleteAssignedLabelString(@QueryParameter String value) {
+            AutoCompletionCandidates c = new AutoCompletionCandidates();
+            Set<Label> labels = Hudson.getInstance().getLabels();
+            List<String> queries = new AutoCompleteSeeder(value).getSeeds();
+
+            for (String term : queries) {
+                for (Label l : labels) {
+                    if (l.getName().startsWith(term)) {
+                        c.add(l.getName());
+                    }
+                }
+            }
+            return c;
+        }
+
+        /**
+         * Utility class for taking the current input value and computing a list
+         * of potential terms to match against the list of defined labels.
+         */
+        static class AutoCompleteSeeder {
+
+            private String source;
+            private Pattern quoteMatcher = Pattern.compile("(\\\"?)(.+?)(\\\"?+)(\\s*)");
+
+            AutoCompleteSeeder(String source) {
+                this.source = source;
+            }
+
+            List<String> getSeeds() {
+                ArrayList<String> terms = new ArrayList();
+                boolean trailingQuote = source.endsWith("\"");
+                boolean leadingQuote = source.startsWith("\"");
+                boolean trailingSpace = source.endsWith(" ");
+
+                if (trailingQuote || (trailingSpace && !leadingQuote)) {
+                    terms.add("");
+                } else {
+                    if (leadingQuote) {
+                        int quote = source.lastIndexOf('"');
+                        if (quote == 0) {
+                            terms.add(source.substring(1));
+                        } else {
+                            terms.add("");
+                        }
+                    } else {
+                        int space = source.lastIndexOf(' ');
+                        if (space > -1) {
+                            terms.add(source.substring(space + 1));
+                        } else {
+                            terms.add(source);
+                        }
+                    }
+                }
+
+                return terms;
+            }
+        }
     }
 }

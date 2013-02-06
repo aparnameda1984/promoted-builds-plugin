@@ -24,10 +24,10 @@ import java.util.Set;
 import javax.servlet.ServletException;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-import org.springframework.security.GrantedAuthority;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
+import org.springframework.security.GrantedAuthority;
 
 /**
  * {@link PromotionCondition} that requires manual promotion.
@@ -154,7 +154,7 @@ public class ManualCondition extends PromotionCondition {
         if (canApprove(promotionProcess, build)) {
             List<ParameterValue> paramValues = new ArrayList<ParameterValue>();
 
-            if (!parameterDefinitions.isEmpty()) {
+            if (parameterDefinitions != null && !parameterDefinitions.isEmpty()) {
                 JSONArray a = JSONArray.fromObject(formData.get("parameter"));
 
                 for (Object o : a) {
@@ -176,7 +176,7 @@ public class ManualCondition extends PromotionCondition {
             build.save();
 
             // check for promotion
-            promotionProcess.considerPromotion(build);
+            promotionProcess.considerPromotion2(build);
         }
 
         rsp.sendRedirect2("../../../..");
@@ -219,7 +219,7 @@ public class ManualCondition extends PromotionCondition {
 
         @Override
         public void buildEnvVars(AbstractBuild<?, ?> build, EnvVars env) {
-            for (ParameterValue value : values) {
+            for (ParameterValue value : getParameterValues()) {
                 value.buildEnvVars(build, env);
             }
         }
@@ -232,7 +232,7 @@ public class ManualCondition extends PromotionCondition {
         }
 
         public String getDisplayName() {
-            return "Only when manually approved";
+            return Messages.ManualCondition_DisplayName();
         }
 
         @Override
@@ -241,11 +241,6 @@ public class ManualCondition extends PromotionCondition {
             instance.users = formData.getString("users");
             instance.parameterDefinitions = Descriptor.newInstancesFromHeteroList(req, formData, "parameters", ParameterDefinition.all());
             return instance;
-        }
-
-        @Override
-        public String getHelpFile() {
-            return "/plugin/promoted-builds/conditions/manual.html";
         }
     }
 }
