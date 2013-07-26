@@ -19,6 +19,7 @@ import java.io.IOException;
 import org.kohsuke.stapler.DataBoundConstructor;
 /**
  * @author Juan Pablo Proverbio
+ * @version 1.0
  *
  */
 public class BuildQuantityCondition extends PromotionCondition{
