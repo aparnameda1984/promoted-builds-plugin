@@ -1,6 +1,7 @@
 package hudson.plugins.promoted_builds.conditions;
 
 import hudson.Extension;
+import hudson.Util;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
@@ -12,11 +13,14 @@ import hudson.plugins.promoted_builds.PromotionConditionDescriptor;
 import hudson.plugins.promoted_builds.PromotionProcess;
 import hudson.plugins.promoted_builds.JobPropertyImpl;
 import hudson.plugins.promoted_builds.Promotion;
+import hudson.util.FormValidation;
 import hudson.util.RunList;
 
 import java.io.IOException;
 
+import org.apache.log4j.Logger;
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 /**
  * @author Juan Pablo Proverbio
  * @version 1.0
@@ -43,14 +47,16 @@ public class BuildQuantityCondition extends PromotionCondition{
         RunList<Promotion> promotionList = promotionProcess.getBuilds();
         int quantity = Integer.parseInt(successQuantity);
         boolean runPromote = true;
-        
+        log.info("Cantidad: "+quantity+" "+"Cantidad de promotion: "+promotionList.size());
         if((promotionList.size()) < quantity){
+        	log.info("Es false 1");
         	runPromote = false;
         }else {
         	int index = 0;
        		for(Promotion promotion : promotionList){
        			if(index < quantity) {
        				if(!promotion.getResult().equals(Result.SUCCESS)){
+       					log.info("Es false 2");
         			  runPromote = false;
         			  break; 
         		   }
@@ -98,9 +104,24 @@ public class BuildQuantityCondition extends PromotionCondition{
         }
     }
 
+    
     @Extension
     public static final class DescriptorImpl extends PromotionConditionDescriptor {
-        public boolean isApplicable(AbstractProject<?,?> item) {
+    	public FormValidation doCheckSuccessQuantity(@QueryParameter String successQuantity) {
+        	//When the textbox is blank is not passed to this phase
+    		if (successQuantity.length()==0)
+                return FormValidation.error(hudson.plugins.promoted_builds.Messages.BuildQuantityCondition_descriptor_cannotBeNull());
+            try {
+            	int quantity = Integer.parseInt(successQuantity);
+            	if(quantity <= 0)
+            		return FormValidation.error(hudson.plugins.promoted_builds.Messages.BuildQuantityCondition_descriptor_greatherZero());
+            	return FormValidation.ok();
+            }catch (NumberFormatException numberFormatEx){
+            	return FormValidation.error(hudson.plugins.promoted_builds.Messages.BuildQuantityCondition_descriptor_isNotInteger());
+            }
+        }
+        
+    	public boolean isApplicable(AbstractProject<?,?> item) {
             return true;
         }
 
@@ -108,4 +129,6 @@ public class BuildQuantityCondition extends PromotionCondition{
             return Messages.BuildQuantityCondition_DisplayName();
         }
     }
+    
+    private static Logger log = Logger.getLogger(BuildQuantityCondition.class.getName());
 }
