@@ -1,11 +1,11 @@
 package hudson.plugins.promoted_builds.conditions;
 
 import hudson.Extension;
-import hudson.Util;
 import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Job;
 import hudson.model.listeners.RunListener;
 import hudson.plugins.promoted_builds.PromotionBadge;
 import hudson.plugins.promoted_builds.PromotionCondition;
@@ -21,9 +21,11 @@ import java.io.IOException;
 import org.apache.log4j.Logger;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+
+import dk.hlyh.ciplugins.projecthealth.ProjectHealthProjectAction;
 /**
  * @author Juan Pablo Proverbio
- * @version 1.0
+ * 
  *
  */
 public class BuildQuantityCondition extends PromotionCondition{
@@ -38,31 +40,26 @@ public class BuildQuantityCondition extends PromotionCondition{
     
     public String getSuccessQuantity() {
 		return successQuantity;
+		
 	}
-
-
+    
     @Override
     public PromotionBadge isMet(PromotionProcess promotionProcess, AbstractBuild<?, ?> build) {
     	Result r = build.getResult();
-        RunList<Promotion> promotionList = promotionProcess.getBuilds();
-        int quantity = Integer.parseInt(successQuantity);
+        RunList<?> jobs = build.getProject().getBuilds();
+    	int quantity = Integer.parseInt(successQuantity);
         boolean runPromote = true;
-        log.info("Cantidad: "+quantity+" "+"Cantidad de promotion: "+promotionList.size());
-        if((promotionList.size()) < quantity){
-        	log.info("Es false 1");
+        if((jobs.size()) < quantity){
         	runPromote = false;
         }else {
-        	int index = 0;
-       		for(Promotion promotion : promotionList){
-       			if(index < quantity) {
-       				if(!promotion.getResult().equals(Result.SUCCESS)){
-       					log.info("Es false 2");
-        			  runPromote = false;
-        			  break; 
+        	for(int a = 0; a <jobs.size(); a++) {
+       			if(a < quantity) {
+       				if(!jobs.get(a).getResult().equals(Result.SUCCESS)){
+       				  runPromote = false;
+        			  break;
         		   }
     			}
-       			index++;
-           } 
+       		} 
         }
 
        if (runPromote && r != Result.UNSTABLE) {
@@ -76,7 +73,7 @@ public class BuildQuantityCondition extends PromotionCondition{
      *
      * <p>
      * This is a single instance that receives all the events everywhere in the system.
-     * @author Kohsuke Kawaguchi
+     * @author Juan Pablo Proverbio
      */
     @Extension
     public static final class RunListenerImpl extends RunListener<AbstractBuild<?,?>> {
@@ -104,12 +101,15 @@ public class BuildQuantityCondition extends PromotionCondition{
         }
     }
 
-    
     @Extension
     public static final class DescriptorImpl extends PromotionConditionDescriptor {
+    	/**
+         * <p>
+         * Validate the value of the textbox before It be passed to isMet() method.
+         * @author Juan Pablo Proverbio
+         */
     	public FormValidation doCheckSuccessQuantity(@QueryParameter String successQuantity) {
-        	//When the textbox is blank is not passed to this phase
-    		if (successQuantity.length()==0)
+        	if (successQuantity.length()==0)
                 return FormValidation.error(hudson.plugins.promoted_builds.Messages.BuildQuantityCondition_descriptor_cannotBeNull());
             try {
             	int quantity = Integer.parseInt(successQuantity);
@@ -130,5 +130,5 @@ public class BuildQuantityCondition extends PromotionCondition{
         }
     }
     
-    private static Logger log = Logger.getLogger(BuildQuantityCondition.class.getName());
+    //private static Logger log = Logger.getLogger(BuildQuantityCondition.class.getName());
 }
