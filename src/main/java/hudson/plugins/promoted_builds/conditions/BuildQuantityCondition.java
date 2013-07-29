@@ -5,24 +5,19 @@ import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Job;
 import hudson.model.listeners.RunListener;
 import hudson.plugins.promoted_builds.PromotionBadge;
 import hudson.plugins.promoted_builds.PromotionCondition;
 import hudson.plugins.promoted_builds.PromotionConditionDescriptor;
 import hudson.plugins.promoted_builds.PromotionProcess;
 import hudson.plugins.promoted_builds.JobPropertyImpl;
-import hudson.plugins.promoted_builds.Promotion;
 import hudson.util.FormValidation;
 import hudson.util.RunList;
 
 import java.io.IOException;
 
-import org.apache.log4j.Logger;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
-
-import dk.hlyh.ciplugins.projecthealth.ProjectHealthProjectAction;
 /**
  * @author Juan Pablo Proverbio
  * 
