@@ -158,5 +158,5 @@ public class BuildQuantityCondition extends PromotionCondition{
         }
     }
     
-    private static Logger log = Logger.getLogger(BuildQuantityCondition.class.getName());
+    //private static Logger log = Logger.getLogger(BuildQuantityCondition.class.getName());
 }
