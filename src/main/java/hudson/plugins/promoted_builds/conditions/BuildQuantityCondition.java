@@ -5,6 +5,7 @@ import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Run;
 import hudson.model.listeners.RunListener;
 import hudson.plugins.promoted_builds.PromotionBadge;
 import hudson.plugins.promoted_builds.PromotionCondition;
@@ -12,12 +13,14 @@ import hudson.plugins.promoted_builds.PromotionConditionDescriptor;
 import hudson.plugins.promoted_builds.PromotionProcess;
 import hudson.plugins.promoted_builds.JobPropertyImpl;
 import hudson.util.FormValidation;
-import hudson.util.RunList;
 
 import java.io.IOException;
+import java.util.ArrayList;
 
+import org.apache.log4j.Logger;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
+
 /**
  * @author Juan Pablo Proverbio
  * 
@@ -41,15 +44,19 @@ public class BuildQuantityCondition extends PromotionCondition{
     @Override
     public PromotionBadge isMet(PromotionProcess promotionProcess, AbstractBuild<?, ?> build) {
     	Result r = build.getResult();
-        RunList<?> jobs = build.getProject().getBuilds();
-    	int quantity = Integer.parseInt(successQuantity);
-        boolean runPromote = true;
-        if((jobs.size()) < quantity){
+        ArrayList jobs = build.getProject().getBuilds();
+        ArrayList buildsToSave = new ArrayList<Run>();
+        int quantity = Integer.parseInt(successQuantity);
+    	boolean runPromote = true;
+        
+    	if((jobs.size()) < quantity){
         	runPromote = false;
         }else {
-        	for(int a = 0; a <jobs.size(); a++) {
-       			if(a < quantity) {
-       				if(!jobs.get(a).getResult().equals(Result.SUCCESS)){
+        	for(int a = 0; a < jobs.size(); a++) {
+       			if(a <= quantity) {
+       				buildsToSave.add(jobs.get(a));
+       				
+       				if(!((Run)jobs.get(a)).getResult().equals(Result.SUCCESS)){
        				  runPromote = false;
         			  break;
         		   }
@@ -57,12 +64,38 @@ public class BuildQuantityCondition extends PromotionCondition{
        		} 
         }
 
+       if(promotionProcess.getLastPromotedBuilds() == null && runPromote){
+    	   promotionProcess.setLastPromotedBuilds(buildsToSave);
+       }
+        
+       if(runPromote){
+    	   runPromote = applyPromote(buildsToSave, promotionProcess.getLastPromotedBuilds());
+       }
+        
        if (runPromote && r != Result.UNSTABLE) {
+    	   promotionProcess.setLastPromotedBuilds(buildsToSave);
     	   return new BuildQuantityBadge();
        }
        return null;
     }
 
+    public boolean applyPromote(ArrayList current, ArrayList last) {
+    	for(int a = 0; a < current.size(); a++){
+    		Run c = (Run)current.get(a);
+    		boolean itHas = false;
+    		for(int b = 0; b < last.size(); b++){
+    			Run l = (Run)last.get(b);
+    			if(c.getNumber() == l.getNumber()){
+    				itHas = true;
+    			}
+    		}
+    		if(itHas){
+    			return false;
+    		}
+    	}
+    	return true;
+    }
+    
     /**
      * {@link RunListener} to pick up completions of a build.
      *
@@ -125,5 +158,5 @@ public class BuildQuantityCondition extends PromotionCondition{
         }
     }
     
-    //private static Logger log = Logger.getLogger(BuildQuantityCondition.class.getName());
+    private static Logger log = Logger.getLogger(BuildQuantityCondition.class.getName());
 }

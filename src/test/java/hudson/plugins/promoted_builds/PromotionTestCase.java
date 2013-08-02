@@ -5,10 +5,11 @@ import hudson.model.FreeStyleProject;
 import hudson.tasks.Builder;
 import hudson.tasks.Publisher;
 import hudson.tasks.Recorder;
-import hudson.tasks.Shell;
 import hudson.util.DescribableList;
+
 import java.util.List;
 import java.util.Map;
+
 import org.jvnet.hudson.test.HudsonTestCase;
 
 /**

@@ -1,25 +1,16 @@
 package hudson.plugins.promoted_builds;
 
-import hudson.model.Descriptor;
-import hudson.model.FreeStyleProject;
-import hudson.model.Result;
 import hudson.model.FreeStyleBuild;
+import hudson.model.Result;
+import hudson.model.FreeStyleProject;
+import hudson.plugins.promoted_builds.conditions.DownstreamPassCondition;
+import hudson.tasks.Recorder;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.BuildTrigger;
 import hudson.tasks.Fingerprinter;
-import hudson.tasks.Recorder;
 import hudson.tasks.Shell;
-import hudson.plugins.promoted_builds.conditions.DownstreamPassCondition;
-import hudson.tasks.*;
-import hudson.util.DescribableList;
-import java.io.IOException;
-import org.jvnet.hudson.test.HudsonTestCase;
-
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * @author Kohsuke Kawaguchi

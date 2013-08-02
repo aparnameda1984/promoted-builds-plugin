@@ -25,6 +25,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.Builder;
 import hudson.tasks.Publisher;
 import hudson.util.DescribableList;
+import hudson.util.RunList;
 import net.sf.json.JSONObject;
 import org.kohsuke.stapler.StaplerRequest;
 
@@ -40,9 +41,14 @@ import org.antlr.runtime.RecognitionException;
  * A dummy {@link AbstractProject} to carry out promotion operations.
  *
  * @author Kohsuke Kawaguchi
+ * @author Juan Pablo Proverbio
  */
 public final class PromotionProcess extends AbstractProject<PromotionProcess,Promotion> implements Saveable {
-
+	/**
+	 * This object is used to store the builds of the last promotion process
+	 */
+	public ArrayList lastPromotedBuilds;
+	
     /**
      * {@link PromotionCondition}s. All have to be met for a build to be promoted.
      */
@@ -81,8 +87,22 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
         }
         save();
     }
-
+    
+    
+    
     /**
+     * This object contains the builds of the last execution of the promote process
+     * @return RunList<?> lastPromotedBuilds
+     */
+	public ArrayList getLastPromotedBuilds() {
+		return lastPromotedBuilds;
+	}
+
+	public void setLastPromotedBuilds(ArrayList lastPromotedBuilds) {
+		this.lastPromotedBuilds = lastPromotedBuilds;
+	}
+
+	/**
      * Returns the root project value.
      *
      * @return the root project value.

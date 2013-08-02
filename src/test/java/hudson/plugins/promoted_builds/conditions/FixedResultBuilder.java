@@ -9,7 +9,6 @@ import hudson.model.Result;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Builder;
-import hudson.tasks.Publisher;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.io.IOException;
