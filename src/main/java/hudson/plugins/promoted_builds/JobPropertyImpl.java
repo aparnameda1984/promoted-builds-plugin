@@ -96,7 +96,7 @@ public final class JobPropertyImpl extends JobProperty<AbstractProject<?,?>> imp
             activeProcessNames.add(name);
             PromotionProcess p;
             try {
-                p = (PromotionProcess) Items.load(this, getRootDirFor(name));
+                p = (PromotionProcess) Items.load(this, getRootDirFor(name), false);
             } catch (IOException e) {
                 // failed to load
                 p = new PromotionProcess(this,name);
@@ -118,7 +118,7 @@ public final class JobPropertyImpl extends JobProperty<AbstractProject<?,?>> imp
         });
         if(subdirs!=null) {
             for (File subdir : subdirs) {
-                PromotionProcess p = (PromotionProcess) Items.load(this, subdir);
+                PromotionProcess p = (PromotionProcess) Items.load(this, subdir, false);
                 processes.add(p);
             }
         }

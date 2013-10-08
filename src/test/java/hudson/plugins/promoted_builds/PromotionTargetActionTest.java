@@ -5,14 +5,13 @@ import hudson.model.FreeStyleProject;
 import hudson.model.ParameterValue;
 import hudson.plugins.promoted_builds.conditions.ManualCondition;
 import hudson.plugins.promoted_builds.conditions.ManualCondition.ManualApproval;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 import java.util.Collections;
 
 /**
  * @author Kohsuke Kawaguchi
  */
-public class PromotionTargetActionTest extends HudsonTestCase {
+public class PromotionTargetActionTest extends PromotionTestCase {
     /**
      * When a project is created, built, and renamed, then the old build is created,
      * that results in NPE.

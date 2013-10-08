@@ -13,6 +13,7 @@ import hudson.plugins.promoted_builds.PromotionTestCase;
  * @author Kohsuke Kawaguchi
  */
 public class SelfPromotionTest extends PromotionTestCase {
+    
     public void testBasic() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
 

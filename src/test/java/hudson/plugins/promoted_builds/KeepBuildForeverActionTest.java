@@ -1,5 +1,6 @@
 package hudson.plugins.promoted_builds;
 
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
@@ -12,12 +13,12 @@ import hudson.plugins.promoted_builds.conditions.DownstreamPassCondition;
 import hudson.tasks.ArtifactArchiver;
 import hudson.tasks.Fingerprinter;
 import hudson.tasks.Recorder;
-import org.jvnet.hudson.test.HudsonTestCase;
 import org.jvnet.hudson.test.TestBuilder;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
+import static junit.framework.Assert.assertTrue;
 
 public class KeepBuildForeverActionTest extends PromotionTestCase {
     
@@ -34,6 +35,8 @@ public class KeepBuildForeverActionTest extends PromotionTestCase {
         assertFalse(upBuild.isKeepLog());
         
         assertBuildStatusSuccess(downJob.scheduleBuild2(0).get());
+        
+        
         waitForBuild(promotionJob, 1);
         assertTrue(upBuild.isKeepLog());
     }
@@ -52,6 +55,11 @@ public class KeepBuildForeverActionTest extends PromotionTestCase {
         assertFalse(upBuild.isKeepLog());
         
         assertBuildStatusSuccess(downJob.scheduleBuild2(0).get());
+        WebClient client = new WebClient();
+        client.setThrowExceptionOnFailingStatusCode(false);
+        client.setThrowExceptionOnFailingStatusCode(false);
+        HtmlPage page = client.getPage(upJob, "configure");
+        
         waitForBuild(promotionJob, 1);
         assertFalse(upBuild.isKeepLog());
     }

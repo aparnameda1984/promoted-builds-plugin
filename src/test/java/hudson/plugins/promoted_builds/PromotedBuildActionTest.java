@@ -1,19 +1,13 @@
 package hudson.plugins.promoted_builds;
 
-import com.gargoylesoftware.htmlunit.html.HtmlImage;
 import hudson.model.Cause.UserCause;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
-import hudson.util.IOException2;
-import org.jvnet.hudson.test.HudsonTestCase;
-
-import java.io.IOException;
-import java.util.List;
 
 /**
  * @author Kohsuke Kawaguchi
  */
-public class PromotedBuildActionTest extends HudsonTestCase {
+public class PromotedBuildActionTest extends PromotionTestCase {
     public void testDeletedPromotionProcess() throws Exception {
         FreeStyleProject p = createFreeStyleProject();
         JobPropertyImpl base = new JobPropertyImpl(p);

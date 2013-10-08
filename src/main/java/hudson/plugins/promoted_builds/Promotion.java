@@ -50,6 +50,9 @@ public class Promotion extends AbstractBuild<PromotionProcess,Promotion>
      */
     public AbstractBuild<?,?> getTarget() {
         PromotionTargetAction pta = getAction(PromotionTargetAction.class);
+        if (pta == null){
+            return null;
+        }
         return pta.resolve(this);
     }
 
@@ -60,6 +63,9 @@ public class Promotion extends AbstractBuild<PromotionProcess,Promotion>
 
     @Override
     public String getUrl() {
+        if (getTarget() == null){
+            return "promotion/" + getParent().getName() + "/promotionBuild/" + getNumber();
+        }
         return getTarget().getUrl() + "promotion/" + getParent().getName() + "/promotionBuild/" + getNumber();
     }
 

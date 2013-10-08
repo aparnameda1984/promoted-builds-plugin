@@ -18,6 +18,12 @@ import org.jvnet.hudson.test.HudsonTestCase;
  * @author Bob Foster
  */
 public class PromotionTestCase extends HudsonTestCase {
+    
+    @Override
+    protected void setUp() throws Exception {
+        System.setProperty("hudson.PluginStrategy", "hudson.ClassicPluginStrategy");
+        super.setUp();
+    }
 
     protected void addBuilder(FreeStyleProject up, Builder builder) throws Exception {
       DescribableList<Builder, Descriptor<Builder>> buildersList = up.getBuildersList();

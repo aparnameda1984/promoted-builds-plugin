@@ -26,12 +26,12 @@ package hudson.plugins.promoted_builds;
 import hudson.model.FreeStyleProject;
 import hudson.plugins.promoted_builds.conditions.DownstreamPassCondition;
 import hudson.tasks.JavadocArchiver;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 /**
  * @author Kohsuke Kawaguchi
  */
-public class ConfigurationRoundtripTest extends HudsonTestCase {
+public class ConfigurationRoundtripTest extends PromotionTestCase {
+    
     /**
      * Configuration roundtrip test to detect data loss.
      */

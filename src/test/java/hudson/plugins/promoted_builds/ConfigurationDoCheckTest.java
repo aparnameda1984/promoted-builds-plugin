@@ -5,12 +5,11 @@ import hudson.model.FreeStyleProject;
 import hudson.plugins.promoted_builds.conditions.DownstreamPassCondition;
 import hudson.tasks.JavadocArchiver;
 import org.jvnet.hudson.test.Bug;
-import org.jvnet.hudson.test.HudsonTestCase;
 
 /**
  * @author Seiji Sogabe
  */
-public class ConfigurationDoCheckTest extends HudsonTestCase {
+public class ConfigurationDoCheckTest extends PromotionTestCase {
 
     @Bug(7972)
     public void testCheckProcessNameRequired() throws Exception {
