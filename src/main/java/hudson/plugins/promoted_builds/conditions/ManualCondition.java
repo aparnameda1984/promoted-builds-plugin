@@ -27,7 +27,7 @@ import net.sf.json.JSONObject;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.StaplerResponse;
-import org.springframework.security.GrantedAuthority;
+import org.springframework.security.core.GrantedAuthority;
 
 /**
  * {@link PromotionCondition} that requires manual promotion.
@@ -127,8 +127,7 @@ public class ManualCondition extends PromotionCondition {
      */
     private boolean isInGroupList() {
         Set<String> groups = getUsersAsSet();
-        GrantedAuthority[] authorities = Hudson.getAuthentication().getAuthorities();
-        for (GrantedAuthority authority : authorities) {
+        for (GrantedAuthority authority : Hudson.getAuthentication().getAuthorities()) {
             if (groups.contains(authority.getAuthority()))
                 return true;
         }

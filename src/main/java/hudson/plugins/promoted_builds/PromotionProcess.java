@@ -85,11 +85,15 @@ public final class PromotionProcess extends AbstractProject<PromotionProcess,Pro
         } else {
             assignedLabel = null;
         }
+        
         //Irrespective of parent allowSave setting, force save
         boolean allowSave = isAllowSave();
-        setAllowSave(true);
-        save();
-        setAllowSave(allowSave);
+        try {
+            setAllowSave(true);
+            save();
+        } finally {
+            setAllowSave(allowSave);
+        }
     }
     
     
